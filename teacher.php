@@ -1,0 +1,177 @@
+<style>
+tr#result:hover{
+	background-color:pink;	
+}
+td#result,tr#result,th#result{
+border:1px black solid;
+text-align:center;
+}
+</style>
+<?php
+	include("includes.php");
+	include("header.php");
+	$user=$_SESSION['username'];
+	
+	if(strcmp($user,'')==0)
+	{
+		header("Location:login.php");
+	}
+	else
+	{
+		if(strcmp($_POST['create'],'')!=0)
+		{
+			if(strcmp($_POST['ename'],'')==0)
+			{
+				$_SESSION['errorFlag']=1;
+				$_SESSION['error[0]']="Please complete all required fields.";
+			}
+			else
+			{
+				$ename=$_POST['ename'];
+				$eroom=$_POST['eroom'];
+				
+				$query="SELECT TeacherName FROM Teacher WHERE TeacherName='$ename'";
+				$result = mysqli_query($link, $query) or die("Query failed : " . mysqli_error());
+				$count=mysqli_num_rows($result);
+				if($count!=0)
+				{
+					$_SESSION['errorFlag']=1;
+					$_SESSION['error[0]']="Name has been used. Please enter another name.";
+				}
+				else
+				{
+					$query="INSERT INTO Teacher VALUES ('','$ename','$eroom')";
+					$result = mysqli_query($link, $query) or die("Query failed : " . mysqli_error());
+					echo "Teacher added successfully!";
+				}
+			}
+		}
+		if(strcmp($_POST['delete'],'')!=0)
+		{
+			for($i=0;$i<$_SESSION['count'];$i++)
+			{
+				if(!empty($_POST[$i]))
+					$dset=$dset.$_POST[$i].",";
+			}
+			$set = substr("$dset", 0, -1);
+			$query="DELETE FROM Teacher WHERE TeacherID IN ($set)";
+			$result = mysqli_query($link, $query) or die("Query failed : " . mysqli_error());
+			echo "<b>Successful deletion!</b>";
+			$_POST['viewall']=1;
+		}
+		if(strcmp($_POST['update'],'')!=0)
+		{
+			$j=0;
+			for($i=0;$i<$_SESSION['count'];$i++)
+			{
+				if(!empty($_POST[$i]))
+				{
+					$_SESSION['uid']=$_POST[$i];
+					$j++;
+				}
+				if($j>1)
+				{
+					$_SESSION['errorFlag']=1;
+					$_SESSION['error[0]']='Only one teacher can be updated at one time. Please select again.';
+				}
+			}
+			if(!isset($_SESSION['errorFlag']))
+				header("Location:teacherEdit.php");
+		}
+		if(strcmp($_POST['updateteacher'],'')!=0)
+		{
+			$id=$_SESSION['uid'];
+			unset($_SESSION['uid']);
+			$query="SELECT * FROM Teacher WHERE TeacherID='$id'";
+			$result = mysqli_query($link, $query) or die("Query failed : " . mysqli_error());
+			while ($line=mysqli_fetch_array($result, MYSQL_ASSOC))
+			{
+				$i=0;
+				foreach($line as $col_value)
+				{
+					$array[$i]=$col_value;
+					$i++;
+				}
+			}
+			$ename=$array[1];
+			$eroom=$array[2];
+
+			if(strcmp($_POST['ename'],'')!=0)
+			{
+				$ename2=$_POST['ename'];
+				$ename=$_POST['ename'];
+			}
+			if(strcmp($_POST['eroom'],'')!=0)
+				$eroom=$_POST['eroom'];
+			
+			$query="SELECT * FROM Teacher WHERE TeacherName='$ename2'";
+			$result = mysqli_query($link, $query) or die("Query failed : " . mysqli_error());
+			$count=mysqli_num_rows($result);
+			if($count!=0)
+			{
+				$_SESSION['errorFlag']=1;
+				$_SESSION['error[0]']='Name has been used. Please enter another name.';
+			}
+			else
+			{				
+				$query="UPDATE Teacher SET TeacherName='$ename',TeacherRoom='$eroom' WHERE TeacherID='$id'";
+				$result = mysqli_query($link, $query) or die("Query failed : " . mysqli_error());
+				echo "<p><b>Record updated successfully!</b></p>";
+				$_POST['viewall']=1;
+			}
+		}
+		if(strcmp($_POST['viewall'],'')!=0)
+		{
+			$query="SELECT * FROM Teacher";
+			$result = mysqli_query($link, $query) or die("Query failed : " . mysqli_error());
+			$_SESSION['count']=mysqli_num_rows($result);
+			if($_SESSION['count']==0)
+			{
+				$_SESSION['errorFlag']=1;
+				$_SESSION['error[0]']='No results!';
+			}
+			else
+			{
+				echo  "<form action='teacher.php' method='POST'><table id='result'><tr id='result'><th id='result'>Teacer Id</th><th id='result'>Teacher Name</th><th>Room</th><th id='result'>Select</th></tr>";
+				$j=0;
+				while ($line=mysqli_fetch_array($result, MYSQL_ASSOC))
+				{
+					echo "<tr id='result'>";
+					$i=0;
+					foreach($line as $col_value)
+					{
+						$array[$i]=$col_value;
+						echo "<td id='result'>$col_value</td>";
+						$i++;
+					}
+					$id=$array[0];
+					echo "<td><input type='checkbox' value='$id' name='$j'/></td></tr>";
+					$j++;
+				}
+				echo "</table>";
+				echo "<br/><input type='submit' value='Delete selected' name='delete'/><input type='submit' value='Update' name='update'/></form><br/>";
+			}
+		}
+	}
+	include("error.php");
+?>
+
+<form method="POST" ACTION="teacher.php">
+	<table>
+		<tr><th><b>Create Teacher Record</b></th><th>(* is required field)</th></tr>
+		<tr>	
+			<td><label for="ename"><b>Teacher Name:</b></label></td>
+			<td><input id="ename" name="ename" type="text"/><font color="red">*</font></td>
+		</tr>
+		<tr>	
+			<td><label for="eroom"><b>Room:</b></label></td>
+			<td><input id="eroom" name="eroom" type="text"/>
+		</tr>
+		<tr>
+			<td><input type="submit" value="Create Record" name="create"></td>
+			<td><input type="submit" value="View All" name="viewall"></td>
+		</tr>
+	</table>
+</form>
+
+<?php include("footer.php"); ?>
